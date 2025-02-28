@@ -4,17 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"gopkg.in/gomail.v2"
 )
 
 type EmailRequest struct {
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	Recipient string `json:"recipient"`
-	Subject   string `json:"subject"`
-	Message   string `json:"message"`
-	Alias     string `json:"alias"`
+	Email      string   `json:"email"`
+	Password   string   `json:"password"`
+	Recipient  string   `json:"recipient"`
+	Subject    string   `json:"subject"`
+	Message    string   `json:"message"`
+	Alias      string   `json:"alias"`
+	Attachment []string `json:"attachments"` // List of file paths
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -39,6 +41,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	m.SetHeader("To", req.Recipient)
 	m.SetHeader("Subject", req.Subject)
 	m.SetBody("text/html", req.Message)
+
+	// Attach files if provided
+	for _, filePath := range req.Attachment {
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf(`{ "error": "File not found: %s" }`, filePath), http.StatusBadRequest)
+			return
+		}
+		m.Attach(filePath)
+	}
 
 	d := gomail.NewDialer("smtp.gmail.com", 587, req.Email, req.Password)
 	d.SSL = false
