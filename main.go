@@ -1,7 +1,8 @@
-package main
+package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"gopkg.in/gomail.v2"
@@ -16,7 +17,7 @@ type EmailRequest struct {
 	Alias     string `json:"alias"`
 }
 
-func sendEmailHandler(w http.ResponseWriter, r *http.Request) {
+func Handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, `{ "error": "Only POST method allowed" }`, http.StatusMethodNotAllowed)
 		return
@@ -43,16 +44,11 @@ func sendEmailHandler(w http.ResponseWriter, r *http.Request) {
 	d.SSL = false
 
 	if err := d.DialAndSend(m); err != nil {
-		http.Error(w, `{ "error": "Failed to send email", "details": "`+err.Error()+`" }`, http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf(`{ "error": "Failed to send email", "details": "%s" }`, err.Error()), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{ "success": "Email sent successfully!" }`))
-}
-
-func main() {
-	http.HandleFunc("/send-email", sendEmailHandler)
-	http.ListenAndServe(":8080", nil)
 }
